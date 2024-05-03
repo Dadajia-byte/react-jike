@@ -1,10 +1,19 @@
 import './index.scss'
-import { Card, Form, Input, Button } from 'antd'
+import { Card, Form, Input, Button, message } from 'antd'
 import logo from '@/assets/logo.png'
+import { useDispatch } from 'react-redux'
+import { fetchLogin } from '@/store/modules/user'
+import { useNavigate } from 'react-router-dom'
+
 
 const Login = () => {
-    const onFinish = (values) => {
-        console.log('Success:', values)
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    const onFinish = async (values) => {
+        await dispatch(fetchLogin(values))
+        navigate('/')
+        message.success('登录成功')
+
     }
     return (
         <div className="login">
@@ -30,8 +39,13 @@ const Login = () => {
                     <Form.Item
                         name="code"
                         rules={
+                            // 验证码是246810
                             [
-                                { required: true, message: '请输入验证码' }
+                                { required: true, message: '请输入验证码' },
+                                {
+                                    pattern: /^\d{6}$/,
+                                    message: '验证码格式错误'
+                                }
                             ]
                         }
                     >
