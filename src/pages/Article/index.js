@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { Card, Breadcrumb, Form, Button, Radio, DatePicker, Select } from 'antd'
+import { Link, useNavigate } from 'react-router-dom'
+import { Card, Breadcrumb, Form, Button, Radio, DatePicker, Select, Popconfirm, message } from 'antd'
 // 引入汉化包，让时间显示器显示为用中文
 import locale from 'antd/es/date-picker/locale/zh_CN'
 
@@ -10,13 +10,14 @@ import img404 from '@/assets/error.png'
 
 import useChannel from '@/hooks/useChannel'
 
-import { getArticleApi } from '@/apis/article'
+import { getArticleApi, delArticleApi } from '@/apis/article'
 import { useEffect, useState } from 'react'
 
 const { Option } = Select
 const { RangePicker } = DatePicker
 
 const Article = () => {
+    const navigate = useNavigate()
     const { channels } = useChannel()
 
     const [list, setList] = useState([])
@@ -55,6 +56,16 @@ const Article = () => {
             begin_pubdate: values.date[0].format('YYYY-MM-DD'),
             end_pubdate: values.date[1].format('YYYY-MM-DD')
         })
+    }
+
+    const delArticle = async (data) => {
+        await delArticleApi(data.id)
+        setReqData({
+            ...reqData
+        })
+        message.success(
+            '删除文章成功'
+        )
     }
 
     // 准备列数据
@@ -100,13 +111,20 @@ const Article = () => {
             render: data => {
                 return (
                     <Space size="middle">
-                        <Button type="primary" shape="circle" icon={<EditOutlined />} />
-                        <Button
-                            type="primary"
-                            danger
-                            shape="circle"
-                            icon={<DeleteOutlined />}
-                        />
+                        <Button type="primary" shape="circle" icon={<EditOutlined />} onClick={() => navigate(`/publish?id=${data.id}`)} />
+                        <Popconfirm
+                            title="确认删除该条文章吗?"
+                            onConfirm={() => delArticle(data)}
+                            okText="确认"
+                            cancelText="取消"
+                        >
+                            <Button
+                                type="primary"
+                                danger
+                                shape="circle"
+                                icon={<DeleteOutlined />}
+                            />
+                        </Popconfirm>
                     </Space>
                 )
             }
@@ -127,6 +145,14 @@ const Article = () => {
             title: 'wkwebview离线化加载h5资源解决方案'
         }
     ]
+
+    const onPageChange = (page, pageSize) => {
+        console.log(page);
+        setReqData({
+            ...reqData,
+            page
+        })
+    }
 
     return (
         <div>
@@ -172,7 +198,12 @@ const Article = () => {
             </Card>
             {/* 表格区域 */}
             <Card title={`根据筛选条件共查询到 ${count} 条结果：`}>
-                <Table rowKey="id" columns={columns} dataSource={list} />
+                <Table rowKey="id" columns={columns} dataSource={list} pagination={{
+                    total: count,
+                    pageSize: reqData.per_page,
+                    onChange: onPageChange
+                }}
+                />
             </Card>
         </div>
     )

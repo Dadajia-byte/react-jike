@@ -10,7 +10,7 @@ import {
     Select
 } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import './index.scss'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -19,6 +19,7 @@ import { useState, useEffect, useRef } from 'react'
 import { message } from 'antd'
 import FormItem from 'antd/es/form/FormItem'
 import useChannel from '@/hooks/useChannel'
+import { getArticleByIdApi } from '@/apis/article'
 
 
 
@@ -63,13 +64,52 @@ const Publish = () => {
             type: imageType,
             cover: {
                 type: imageType,
-                images: imageList.map(item => item.response.data.url)
+                images: imageList.map(item => {
+                    if (item.response) {
+                        return item.response.data.url
+                    } else {
+                        return item.url
+                    }
+                })
             }
         }
-        await request.post('/mp/articles?draft=false', params)
-        message.success('发布文章成功')
+        // 不同地方调用不同接口
+        if (articleId) {
+            await request.put(`/mp/articles/${articleId}?draft=false`, params)
+            message.success('编辑文章成功')
+        } else {
+            await request.post('/mp/articles?draft=false', params)
+            message.success('发布文章成功')
+        }
     }
 
+
+    // 回填数据
+    const [searchParams] = useSearchParams()
+    const articleId = searchParams.get('id')
+
+    // 获取实例
+    const [form] = Form.useForm()
+
+    useEffect(() => {
+        async function getArticleDetails() {
+            const res = await getArticleByIdApi(articleId)
+            const [data, { cover }] = [res.data, res.data]
+            form.setFieldsValue({
+                ...data,
+                type: cover.type
+            })
+            setImageType(cover.type)
+            setImageList(cover.images.map(url => {
+                return {
+                    url
+                }
+            }))
+        }
+        if (articleId) {
+            getArticleDetails()
+        }
+    }, [articleId])
 
     return (
         <div className="publish">
@@ -77,7 +117,7 @@ const Publish = () => {
                 title={
                     <Breadcrumb items={[
                         { title: <Link to={'/'}>首页</Link> },
-                        { title: '发布文章' },
+                        { title: `${articleId ? '编辑文章' : '发布文章'}` },
                     ]}
                     />
                 }
@@ -87,6 +127,7 @@ const Publish = () => {
                     wrapperCol={{ span: 16 }}
                     initialValues={{ type: 1 }}
                     onFinish={onFinish}
+                    form={form}
                 >
                     <Form.Item
                         label="标题"
@@ -148,7 +189,7 @@ const Publish = () => {
                     <Form.Item wrapperCol={{ offset: 4 }}>
                         <Space>
                             <Button size="large" type="primary" htmlType="submit">
-                                发布文章
+                                {articleId ? '编辑文章' : '发布文章'}
                             </Button>
                         </Space>
                     </Form.Item>
