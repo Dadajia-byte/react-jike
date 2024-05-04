@@ -15,8 +15,9 @@ import './index.scss'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 import { request } from '@/utils'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { message } from 'antd'
+import FormItem from 'antd/es/form/FormItem'
 
 
 
@@ -37,27 +38,46 @@ const Publish = () => {
     }, [])
 
     // 上传图片
+    const cacheImageList = useRef([])
     const [imageList, setImageList] = useState([])
     const onUploadChange = (info) => {
         setImageList(info.fileList)
+        cacheImageList.current = info.fileList
+    }
+
+    // 控制图片Type
+    const [imageType, setImageType] = useState(0)
+    const onRadioChange = (e) => {
+        const type = e.target.value
+        setImageType(type)
+        if (type === 1) {
+            // 单图，截取第一张展示
+            const imgList = cacheImageList.current[0] ? [cacheImageList.current[0]] : []
+            setImageList(imgList)
+        } else if (type === 3) {
+            // 三图，取所有图片展示
+            setImageList(cacheImageList.current)
+        }
     }
 
     // 发布文章
     const onFinish = async (formValue) => {
+        if (imageType !== imageList.length) return message.warning('图片类型和数量不一致')
         const { channel_id, content, title } = formValue
         const params = {
             channel_id,
             content,
             title,
-            type: 1,
+            type: imageType,
             cover: {
-                type: 1,
-                images: []
+                type: imageType,
+                images: imageList.map(item => item.response.data.url)
             }
         }
         await request.post('/mp/articles?draft=false', params)
         message.success('发布文章成功')
     }
+
 
     return (
         <div className="publish">
@@ -96,25 +116,30 @@ const Publish = () => {
                             ))}
                         </Select>
                     </Form.Item>
-                    <Form.Item label="封面">
+                    <Form.Item label="封面" ref={FormItem}>
                         <Form.Item name="type">
-                            <Radio.Group>
+                            <Radio.Group onChange={onRadioChange}>
                                 <Radio value={1}>单图</Radio>
                                 <Radio value={3}>三图</Radio>
                                 <Radio value={0}>无图</Radio>
                             </Radio.Group>
                         </Form.Item>
-                        <Upload
-                            name="image"
-                            listType="picture-card"
-                            showUploadList
-                            action={'http://geek.itheima.net/v1_0/upload'}
-                            onChange={onUploadChange}
-                        >
-                            <div style={{ marginTop: 8 }}>
-                                <PlusOutlined />
-                            </div>
-                        </Upload>
+                        {imageType > 0 &&
+                            <Upload
+                                name="image"
+                                listType="picture-card"
+                                className="avatar-uploader"
+                                showUploadList
+                                action={'http://geek.itheima.net/v1_0/upload'}
+                                onChange={onUploadChange}
+                                maxCount={imageType}
+                                multiple={imageType > 1}
+                                fileList={imageList}
+                            >
+                                <div style={{ marginTop: 8 }}>
+                                    <PlusOutlined />
+                                </div>
+                            </Upload>}
                     </Form.Item>
                     <Form.Item
                         label="内容"
