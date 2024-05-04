@@ -18,7 +18,7 @@ import { request } from '@/utils'
 import { useState, useEffect, useRef } from 'react'
 import { message } from 'antd'
 import FormItem from 'antd/es/form/FormItem'
-
+import useChannel from '@/hooks/useChannel'
 
 
 
@@ -27,15 +27,7 @@ const { Option } = Select
 
 const Publish = () => {
     // 频道列表
-    const [channels, setChannels] = useState([])
-    // 调用接口
-    useEffect(() => {
-        async function fetchChannels() {
-            const res = await request.get('/channels')
-            setChannels(res.data.channels)
-        }
-        fetchChannels()
-    }, [])
+    const { channels } = useChannel()
 
     // 上传图片
     const cacheImageList = useRef([])
